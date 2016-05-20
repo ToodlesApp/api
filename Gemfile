@@ -1,5 +1,7 @@
 source 'https://rubygems.org'
 
+gem 'uuidtools', '~> 2.1', '>= 2.1.5'
+
 gem 'bcrypt', '~> 3.1', '>= 3.1.11'
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'

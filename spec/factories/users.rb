@@ -5,6 +5,6 @@ FactoryGirl.define do
     email "MyString"
     username "MyString"
     password_digest "MyString"
-    email_validated false
+    account_validated false
   end
 end

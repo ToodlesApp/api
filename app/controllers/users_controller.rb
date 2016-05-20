@@ -1,5 +1,5 @@
 class UsersController < ApplicationController
-  before_action :set_user, only: [:show, :update, :destroy]
+  before_action :set_user, only: [:show, :update, :destroy, :resend_activation_email]
 
   # GET /users
   def index
@@ -16,8 +16,8 @@ class UsersController < ApplicationController
   # POST /users
   def create
     @user = User.new(user_params)
-
     if @user.save
+      ActivateAccountMailer.activate_account_email(@user).deliver_later
       render json: @user, status: :created, location: @user
     else
       render json: @user.errors, status: :unprocessable_entity
@@ -48,13 +48,27 @@ class UsersController < ApplicationController
     end
   end
 
-  # POST /validate_email
-  def validate_email
-    user = User.find_by(email: params[:email])
-    if user.update(email_validated: true)
-      render json: {validated: true, details: "Success"}
+  # GET /activate_account
+  def activate_account
+    user = User.find_by(username: params[:username])
+    if !user
+      render json: {activated: false, details: "Invalid username"}
+    elsif user.is_activated
+      render json: {activated: false, details: "Account already activated"}
+    elsif !user.activate(params[:code])
+      render json: {activated: false, details: "Unable to activate"}
     else
-      render json: {validated: false, details: user.errors}
+      render json: {activated: true, details: "Success"}
+    end
+  end
+
+  # GET /resend_activation_email/1
+  def resend_activation_email
+    if @user.is_activated
+      render json: {sent_email: false, details: "Account already activated"}
+    else
+      ActivateAccountMailer.activate_account_email(@user).deliver_later
+      render json: {sent_email: true, details: "Success"}
     end
   end
 
