@@ -1,5 +1,5 @@
 class UsersController < ApplicationController
-  before_action :set_user, only: [:show, :update, :destroy, :resend_activation_email]
+  before_action :set_user, only: [:show, :update, :destroy, :resend_activation_email, :change_password, :forgot_password]
 
   # GET /users
   def index
@@ -70,6 +70,50 @@ class UsersController < ApplicationController
       ActivateAccountMailer.activate_account_email(@user).deliver_later
       render json: {sent_email: true, details: "Success"}
     end
+  end
+
+  # GET /forgot_password/1
+  def forgot_password
+    if @user
+      ForgotPasswordMailer.forgot_password_email(@user).deliver
+      render json: {sent_email: true, details: "Success"}
+    else
+      render json: {sent_email: false, details: "Unable to find user"}
+    end
+  end
+
+  # GET /get_new_password
+  def get_new_password
+    user = User.find_by(username: params[:username])
+    if user && user.password_digest == params[:code]
+      random_password = SecureRandom.hex(4)
+      user.password = random_password
+      user.password_confirmation = random_password
+      if user.save
+        render json: {password_generated: true, details: random_password}
+      else
+        render json: user.errors, status: :unprocessable_entity
+      end
+    else
+      render json: {valid: false, details: "Invalid username/code"}
+    end
+
+  end
+
+  # POST /change_password/1
+  def change_password
+    if !@user.authenticate(params[:password])
+      render json: {password_changed: false, details: "Invalid password"}
+    else
+      @user.password = params[:new_password]
+      @user.password_confirmation = params[:new_password_confirmation]
+      if @user.save
+        render json: @user, status: :updated, location: @user
+      else
+        render json: @user.errors, status: :unprocessable_entity
+      end
+    end
+
   end
 
   private

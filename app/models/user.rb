@@ -17,8 +17,6 @@ class User < ApplicationRecord
 
   has_one :account_activation_code
 
-  require "uuidtools"
-
   def is_activated
     return self.account_activation_code == nil
   end
@@ -40,6 +38,6 @@ class User < ApplicationRecord
   end
 
   def create_activation_code
-    AccountActivationCode.new(user_id: self.id, code: UUIDTools::UUID.random_create.to_s()).save
+    AccountActivationCode.new(user_id: self.id, code: SecureRandom.uuid).save
   end
 end
