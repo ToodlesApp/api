@@ -38,11 +38,11 @@ class UsersController < ApplicationController
     @user.destroy
   end
 
-  # POST /login
-  def login
-    user = User.find_by(username: params[:username])
-    if user && user.authenticate(params[:password])
-      render json: {valid: true, details: "Success"}
+  # POST /validate_credentials
+  def validate_credentials
+    @user = User.find_by(username: params[:username])
+    if @user && @user.authenticate(params[:password])
+      render json: {valid: true, details: @user}
     else
       render json: {valid: false, details: "Invalid username/password combination"}
     end
