@@ -17,7 +17,7 @@ class UsersController < ApplicationController
   def create
     @user = User.new(user_params)
     if @user.save
-      ActivateAccountMailer.activate_account_email(@user).deliver_later
+      ActivateAccountMailer.activate_account_email(@user).deliver_now!
       render json: {created: true, details: @user}
     else
       render json: {created: false, details: @user.errors}
