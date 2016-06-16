@@ -18,18 +18,18 @@ class UsersController < ApplicationController
     @user = User.new(user_params)
     if @user.save
       ActivateAccountMailer.activate_account_email(@user).deliver_later
-      render json: @user, status: :created, location: @user
+      render json: {created: true, details: @user}
     else
-      render json: @user.errors, status: :unprocessable_entity
+      render json: {created: false, details: @user.errors}
     end
   end
 
   # PATCH/PUT /users/1
   def update
     if @user.update(user_params)
-      render json: @user
+      render json: {updated: true, details: @user}
     else
-      render json: @user.errors, status: :unprocessable_entity
+      render json: {updated: false, details: @user.errors}
     end
   end
 
@@ -103,14 +103,14 @@ class UsersController < ApplicationController
   # POST /change_password/1
   def change_password
     if !@user.authenticate(params[:password])
-      render json: {password_changed: false, details: "Invalid password"}
+      render json: {updated: false, details: "Invalid password"}
     else
       @user.password = params[:new_password]
       @user.password_confirmation = params[:new_password_confirmation]
       if @user.save
-        render json: @user, status: :updated, location: @user
+        render json: {updated: true , details: @user}
       else
-        render json: @user.errors, status: :unprocessable_entity
+        render json: {updated: false, details: @user.errors}
       end
     end
 
