@@ -92,8 +92,15 @@ class UsersController < ApplicationController
 
   # PUT /change_info/1
   def change_info
+      old_email = @user.email
       if @user.update(change_info_params)
-        render json: {success: true, details: @user}
+        if change_info_params[:email] == old_email
+          render json: {success: true, details: @user, email_changed: false}
+        else
+          @user.create_activation_code
+          ActivateAccountMailer.activate_account_email_new(@user).deliver_now!
+          render json: {success: true, details: @user, email_changed: true}
+        end
       else
         render json: {success: false, details: @user.errors}
       end
@@ -114,7 +121,7 @@ class UsersController < ApplicationController
 
   private
     def set_user
-      @user = User.find(params[:id])
+      @user = User.find_by(id: params[:id])
       if !@user
         render json: {success: false, details: "Unable to find user account"}
       end
@@ -125,7 +132,7 @@ class UsersController < ApplicationController
     end
 
     def change_info_params
-      params.require(:user).permit(:first_name, :last_name)
+      params.require(:user).permit(:first_name, :last_name, :email)
     end
 
     def change_email_params
