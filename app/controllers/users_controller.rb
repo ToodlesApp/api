@@ -1,12 +1,6 @@
 class UsersController < ApplicationController
-  before_action :set_user, only: [:show, :update, :destroy, :resend_activation_email, :change_password, :forgot_password]
-
-  # GET /users
-  def index
-    @users = User.all
-
-    render json: @users
-  end
+  before_action :set_user, only: [:show, :activate_account, :change_info, :change_email,
+    :resend_activation_email, :change_password, :forgot_password]
 
   # GET /users/1
   def show
@@ -15,47 +9,30 @@ class UsersController < ApplicationController
 
   # POST /users
   def create
-    @user = User.new(user_params)
+    @user = User.new(create_params)
     if @user.save
-      ActivateAccountMailer.activate_account_email(@user).deliver_now!
+      ActivateAccountMailer.activate_account_email(@user).deliver_later
       render json: {success: true, details: @user}
     else
       render json: {success: false, details: @user.errors}
     end
-  end
-
-  # PATCH/PUT /users/1
-  def update
-    if @user.update(user_params)
-      render json: {success: true, details: @user}
-    else
-      render json: {success: false, details: @user.errors}
-    end
-  end
-
-  # DELETE /users/1
-  def destroy
-    @user.destroy
   end
 
   # POST /validate_credentials
   def validate_credentials
-    @user = User.find_by(username: params[:username])
+    @user = User.find_by(email: params[:email])
     if @user && @user.authenticate(params[:password])
       render json: {success: true, details: @user}
     else
-      render json: {success: false, details: "Invalid username/password combination"}
+      render json: {success: false, details: "Invalid email/password combination"}
     end
   end
 
-  # GET /activate_account
+  # GET /activate_account/1
   def activate_account
-    user = User.find_by(username: params[:username])
-    if !user
-      render json: {success: false, details: "Invalid username"}
-    elsif user.is_activated
+    if @user.is_activated
       render json: {success: false, details: "Account already activated"}
-    elsif !user.activate(params[:code])
+    elsif !@user.activate(params[:code])
       render json: {success: false, details: "Unable to activate"}
     else
       render json: {success: true, details: "Success"}
@@ -75,32 +52,30 @@ class UsersController < ApplicationController
   # GET /forgot_password/1
   def forgot_password
     if @user
-      ForgotPasswordMailer.forgot_password_email(@user).deliver
+      ForgotPasswordMailer.forgot_password_email(@user).deliver_later!
       render json: {success: true, details: "Success"}
     else
       render json: {success: false, details: "Unable to find user"}
     end
   end
 
-  # GET /get_new_password
+  # GET /get_new_password/1
   def get_new_password
-    user = User.find_by(username: params[:username])
-    if user && user.password_digest == params[:code]
+    if @user.password_digest == params[:code]
       random_password = SecureRandom.hex(4)
-      user.password = random_password
-      user.password_confirmation = random_password
-      if user.save
+      @user.password = random_password
+      @user.password_confirmation = random_password
+      if @user.save
         render json: {success: true, details: random_password}
       else
-        render json: {success: false, details: user.errors}
+        render json: {success: false, details: @user.errors}
       end
     else
-      render json: {success: false, details: "Invalid username/code"}
+      render json: {success: false, details: "Invalid code"}
     end
-
   end
 
-  # POST /change_password/1
+  # PUT /change_password/1
   def change_password
     if !@user.authenticate(params[:password])
       render json: {success: false, details: "Invalid password"}
@@ -113,17 +88,47 @@ class UsersController < ApplicationController
         render json: {success: false, details: @user.errors}
       end
     end
+  end
 
+  # PUT /change_info/1
+  def change_info
+      if @user.update(change_info_params)
+        render json: {success: true, details: @user}
+      else
+        render json: {success: false, details: @user.errors}
+      end
+  end
+
+  # PUT /change_email/1
+  def change_email
+      if change_email_params[:email] == @user.email
+        render json: {success: false, details: "Email didn't change"}
+      elsif @user.update(change_email_params)
+        @user.create_activation_code
+        ActivateAccountMailer.activate_account_email_new(@user).deliver_now!
+        render json: {success: true, details: @user}
+      else
+        render json: {success: false, details: @user.errors}
+      end
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
     def set_user
       @user = User.find(params[:id])
+      if !@user
+        render json: {success: false, details: "Unable to find user account"}
+      end
     end
 
-    # Only allow a trusted parameter "white list" through.
-    def user_params
-      params.require(:user).permit(:first_name, :last_name, :email, :username, :password, :password_confirmation)
+    def create_params
+      params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation)
+    end
+
+    def change_info_params
+      params.require(:user).permit(:first_name, :last_name)
+    end
+
+    def change_email_params
+      params.require(:user).permit(:email)
     end
 end
