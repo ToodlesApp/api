@@ -1,0 +1,2 @@
+class Booklet < ApplicationRecord
+end
