@@ -10,8 +10,6 @@ gem 'bcrypt', '~> 3.1', '>= 3.1.11'
 
 gem 'rails', '>= 5.0.0.rc1', '< 5.1'
 
-gem 'sqlite3'
-
 gem 'puma', '~> 3.0'
 
 group :development, :test do
